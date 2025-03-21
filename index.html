@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question Bank</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <div id="passwordOverlay" class="password-overlay">
+        <div class="password-box">
+            <h2>Enter Password</h2>
+            <input type="password" id="passwordInput" placeholder="Password" autocomplete="off">
+            <button onclick="checkPassword()">Submit</button>
+            <p id="passwordError" style="color: red; display: none;">Invalid Password!</p>
+        </div>
+    </div>
+
+
+    <div class="blur-overlay"></div>
+
+<!-- Update the button-group div to include the new IDs -->
+<div class="button-group">
+    <button id="exportButton" class="btn" onclick="exportData()" title="Backup Data">
+        <i class="fa fa-download"></i> Backup
+    </button>
+    <label id="importButton" for="importInput" class="btn" title="Import Data">
+        <i class="fa fa-upload"></i> Import
+    </label>
+    <input type="file" id="importInput" accept=".json" style="display: none;" onchange="importData(event)">
+</div>
+<button id="bookmarkSectionBtn" class="bookmark-section-btn" onclick="toggleBookmarkSection()">
+    <i class="fa fa-star"></i> Bookmarks <span id="bookmarkCount" class="bookmark-count" style="display: none;">0</span>
+</button>
+<div id="bookmarkSection" class="bookmark-section">
+    <div class="bookmark-section-header">
+        <h2 class="bookmark-section-title">Bookmarked Questions</h2>
+        <button class="bookmark-close-btn" onclick="toggleBookmarkSection()">×</button>
+    </div>
+    <div id="bookmarkedQuestionsContainer"></div>
+</div>
+  <div class="container">
+
+        <!-- Subjects Panel -->
+        <div class="sidebar-section">
+            <div class="section-header">
+                <h2 class="section-title">Subjects</h2>
+                <div class="button-group">
+                    <button class="btn" onclick="toggleEdit('subject')">Edit</button>
+                    <button class="btn" onclick="addSubject()">+ Add</button>
+                </div>
+            </div>
+            <ul class="item-list" id="subjectList"></ul>
+        </div>
+    
+        <!-- Chapters Panel -->
+        <div class="sidebar-section">
+            <div class="section-header">
+                <h2 class="section-title">Chapters</h2>
+                <div class="button-group">
+                    <button class="btn" onclick="toggleEdit('chapter')">Edit</button>
+                    <button class="btn" onclick="addChapter()">+ Add</button>
+                </div>
+            </div>
+            <ul class="item-list" id="chapterList"></ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="question-section">
+            <div class="section-header">
+                <h2 class="section-title">Questions</h2>
+                <div class="button-group">
+                    <button class="btn" id="addQuestionBtn" style="display: none;" onclick="toggleQuestionForm()">+ Add Question</button>
+                </div>
+            </div>
+            
+            <!-- Select chapter prompt -->
+            <div id="selectChapterPrompt">
+                Please select a subject and chapter to add or view questions
+            </div>
+            
+            <form id="questionForm" style="display: none;">
+                <div class="form-group" style="display: flex; align-items: center; gap: 1rem;">
+                    <label class="file-input" for="questionImage">
+                        📁 Upload Question Image
+                    </label>
+                    <input type="file" id="questionImage" accept="image/*" required hidden>
+                    
+                    <label class="file-input" for="solutionImage">
+                        📁 Upload Solution Image
+                    </label>
+                    <input type="file" id="solutionImage" accept="image/*" required hidden>
+                </div>
+                
+                <button type="submit" class="btn">Submit Question</button>
+            </form>
+
+            <div id="questionsContainer"></div>
+        </div>
+    </div>
+
+    <div id="imageModal" class="modal" style="display: none;">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="modalImage">
+        <div id="caption"></div>
+    </div>
+
+    <div id="notification" class="notification" style="display: none;">
+        Question added successfully!
+    </div>
+
+    <footer style="margin-top: 2rem; padding: 1rem; text-align: center; position: relative;">
+        <div style="border-top: 2px solid; border-image: linear-gradient(to right,rgb(213, 6, 6), #FF5733, #2a81f4, #01229c) 1; margin-bottom: 1rem;"></div>
+        <div>
+            <a href="https://t.me/adityasuryawanshi" target="_blank" style="margin: 0 1rem; transition: transform 0.2s;">
+                <i class="fa fa-telegram" style="font-size: 24px; color: #2a81f4;"></i>
+            </a>
+            <a href="mailto:adityacodearena@gmail.com" style="margin: 0 1rem; transition: transform 0.2s;">
+                <i class="fa fa-envelope" style="font-size: 24px; color: rgb(149, 224, 165);"></i>
+            </a>
+        </div>
+        <div style="margin-top: 1rem;; font-size: 14px;">
+            -  by 
+            <a href="https://codearena07.vercel.app/" style="text-decoration: none;" target="_blank" rel="noopener noreferrer">
+                <span id="codeArena" style="background: linear-gradient(45deg,rgb(116, 107, 255), #ff0000, #c7a1ff); -webkit-background-clip: text; color: transparent;">
+                  codeArena
+                </span></a>
+        </div>
+        <div style="font-size: 12px; color: grey; margin-top: 0.5rem;">
+            &copy; 2025 All Rights Reserved
+        </div>
+    </footer>
+
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+// ==== Password Configuration ====
+const VALID_PASSWORDS = ["friend1", "friend2", "customPassword"]; // अपने पासवर्ड यहाँ सेट करें
+// ================================
+
+// Check authentication as soon as DOM is ready
+document.addEventListener("DOMContentLoaded", function() {
+    if (localStorage.getItem('authenticated') === 'true') {
+        document.getElementById('passwordOverlay').style.display = 'none';
+        document.body.style.overflow = 'auto';
+    } else {
+        document.getElementById('passwordOverlay').style.display = 'block'; // सुनिश्चित करें कि ओवरले दिखे
+        document.body.style.overflow = 'hidden'; // Prevent scrolling
+    }
+});
+
+function checkPassword() {
+    const input = document.getElementById('passwordInput').value;
+    const errorElement = document.getElementById('passwordError');
+    
+    if (VALID_PASSWORDS.includes(input.trim())) {
+        localStorage.setItem('authenticated', 'true');
+        document.getElementById('passwordOverlay').style.display = 'none';
+        document.body.style.overflow = 'auto'; // Restore scrolling
+    } else {
+        errorElement.style.display = 'block';
+    }
+}
+
+
+
+        let db;
+        let selectedSubjectId = null;
+        let selectedChapterId = null;
+
+        // Initialize Database
+        const DB_NAME = 'JEE_Question_Bank';
+        const DB_VERSION = 3; // Increased version number to handle schema changes
+
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onerror = (event) => {
+            console.error('Database error:', event.target.error);
+            alert('Database initialization failed!');
+        };
+
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            const oldVersion = event.oldVersion;
+            
+            // Create object stores if they don't exist
+            if (oldVersion < 1) {
+                if (!db.objectStoreNames.contains('subjects')) {
+                    db.createObjectStore('subjects', { keyPath: 'id', autoIncrement: true });
+                }
+            }
+
+            if (oldVersion < 2) {
+                if (!db.objectStoreNames.contains('chapters')) {
+                    const chaptersStore = db.createObjectStore('chapters', {
+                        keyPath: 'id',
+                        autoIncrement: true
+                    });
+                    chaptersStore.createIndex('subjectId', 'subjectId');
+                }
+
+                if (!db.objectStoreNames.contains('questions')) {
+                    const questionsStore = db.createObjectStore('questions', {
+                        keyPath: 'id',
+                        autoIncrement: true
+                    });
+                    questionsStore.createIndex('chapterId', 'chapterId');
+                }
+            }
+
+            if (oldVersion < 3) {
+                if (!db.objectStoreNames.contains('bookmarks')) {
+                    const bookmarksStore = db.createObjectStore('bookmarks', {
+                        keyPath: 'questionId'
+                    });
+                    bookmarksStore.createIndex('timestamp', 'timestamp');
+                }
+            }
+        };
+
+        request.onsuccess = (event) => {
+            db = event.target.result;
+            console.log("Database opened successfully");
+            loadSubjects();
+            setupEventListeners();
+            updateBookmarkCount();
+        };
+
+        // Event Listeners
+        function setupEventListeners() {
+            const questionForm = document.getElementById('questionForm');
+            if (questionForm) {
+                questionForm.addEventListener('submit', handleQuestionSubmit);
+            }
+            
+            const questionImage = document.getElementById('questionImage');
+            if (questionImage) {
+                questionImage.addEventListener('change', handleFileSelect);
+            }
+            
+            const solutionImage = document.getElementById('solutionImage');
+            if (solutionImage) {
+                solutionImage.addEventListener('change', handleFileSelect);
+            }
+        }
+
+        function handleFileSelect(event) {
+            const fileName = event.target.files[0] ? event.target.files[0].name : 'No file chosen';
+            const label = event.target.previousElementSibling;
+            label.textContent = `📁 ${fileName}`;
+        }
+
+        // Subject Functions
+        function addSubject() {
+            const name = prompt('Enter subject name:');
+            if (name) {
+                const transaction = db.transaction('subjects', 'readwrite');
+                const store = transaction.objectStore('subjects');
+                
+                const request = store.add({ name });
+                
+                request.onsuccess = () => {
+                    console.log("Subject added successfully");
+                    loadSubjects();
+                    showNotification('Subject added successfully!');
+                };
+                
+                request.onerror = (event) => {
+                    console.error("Error adding subject:", event.target.error);
+                    showNotification('Error adding subject. Please try again.');
+                };
+                
+                transaction.oncomplete = () => {
+                    console.log("Transaction completed");
+                };
+                
+                transaction.onerror = (event) => {
+                    console.error("Transaction error:", event.target.error);
+                };
+            }
+        }
+
+        // Chapter Functions
+        function addChapter() {
+            if (!selectedSubjectId) {
+                showNotification('Please select a subject first!');
+                return;
+            }
+
+            const name = prompt('Enter chapter name:');
+            if (name) {
+                const transaction = db.transaction('chapters', 'readwrite');
+                const store = transaction.objectStore('chapters');
+                
+                const request = store.add({
+                    name,
+                    subjectId: selectedSubjectId
+                });
+                
+                request.onsuccess = () => {
+                    console.log("Chapter added successfully");
+                    loadChapters(selectedSubjectId);
+                    showNotification('Chapter added successfully!');
+                };
+                
+                request.onerror = (event) => {
+                    console.error("Error adding chapter:", event.target.error);
+                    showNotification('Error adding chapter. Please try again.');
+                };
+            }
+        }
+
+        // Question Functions
+        async function handleQuestionSubmit(e) {
+            e.preventDefault();
+
+            // Check if a subject is selected
+            if (!selectedSubjectId) {
+                alert('Please select a subject first!');
+                return; // Prevent submission
+            }
+
+            // Check if a chapter is selected
+            if (!selectedChapterId) {
+                alert('Please select a chapter first!');
+                return; // Prevent submission
+            }
+
+            const questionFile = document.getElementById('questionImage').files[0];
+            const solutionFile = document.getElementById('solutionImage').files[0];
+
+            // Check if at least the question image is provided
+            if (!questionFile) {
+                alert('Please upload a question image!');
+                return; // Prevent submission
+            }
+
+            try {
+                const questionImageData = await readFile(questionFile);
+                const solutionImageData = solutionFile ? await readFile(solutionFile) : null; // Read solution image if provided
+
+                const transaction = db.transaction('questions', 'readwrite');
+                const store = transaction.objectStore('questions');
+
+                const questionData = {
+                    chapterId: selectedChapterId,
+                    questionImage: questionImageData,
+                    solutionImage: solutionImageData, // This can be null if not provided
+                    timestamp: new Date().toISOString()
+                };
+
+                // Only add the question data once
+                const addRequest = store.add(questionData);
+                
+                addRequest.onsuccess = () => {
+                    console.log("Question added successfully");
+                    loadQuestions(selectedChapterId);
+                    document.getElementById('questionForm').reset();
+                    showNotification('Question added successfully!');
+                    
+                    // Reset file input labels
+                    document.querySelector('label[for="questionImage"]').textContent = '📁 Upload Question Image';
+                    document.querySelector('label[for="solutionImage"]').textContent = '📁 Upload Solution Image';
+                };
+
+                addRequest.onerror = (event) => {
+                    console.error('Error adding question:', event.target.error);
+                    alert('Failed to add question. Please try again.');
+                };
+
+            } catch (error) {
+                console.error('Error reading files:', error);
+                alert('Failed to read files. Please try again.');
+            }
+        }
+
+        // Helper Functions
+        function readFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = (error) => reject(error);
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function toggleQuestionForm() {
+            const form = document.getElementById('questionForm');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Load Data Functions
+        function loadSubjects() {
+            if (!db) {
+                console.error("Database not initialized");
+                return;
+            }
+            
+            try {
+                const transaction = db.transaction('subjects', 'readonly');
+                const store = transaction.objectStore('subjects');
+                const request = store.getAll();
+
+                request.onsuccess = (event) => {
+                    const subjects = event.target.result;
+                    console.log("Loaded subjects:", subjects);
+                    const list = document.getElementById('subjectList');
+                    list.innerHTML = '';
+
+                    subjects.forEach(subject => {
+                        const li = document.createElement('li');
+                        li.className = 'list-item';
+                        li.textContent = subject.name;
+                        li.setAttribute('data-id', subject.id);
+
+                        // Create delete button
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'btn delete-btn';
+                        deleteBtn.innerHTML = '<i class="fa fa-trash-o"></i>'; // Font Awesome trash icon
+                        deleteBtn.onclick = (e) => {
+                            e.stopPropagation(); // Prevent triggering the subject click
+                            deleteSubject(subject.id);
+                        };
+                        deleteBtn.style.display = 'none'; // Initially hidden
+
+                        li.onclick = () => handleSubjectClick(subject.id, li);
+                        li.appendChild(deleteBtn); // Append delete button to the list item
+                        list.appendChild(li);
+                        
+                        // If this is the selected subject, mark it as active
+                        if (subject.id === selectedSubjectId) {
+                            li.classList.add('active');
+                        }
+                    });
+                };
+
+                request.onerror = (event) => {
+                    console.error("Error loading subjects:", event.target.error);
+                };
+            } catch (error) {
+                console.error("Exception in loadSubjects:", error);
+            }
+        }
+
+        function handleSubjectClick(subjectId, element) {
+            selectedSubjectId = subjectId;
+            document.querySelectorAll('#subjectList .list-item').forEach(item => 
+                item.classList.remove('active'));
+            element.classList.add('active');
+            loadChapters(subjectId);
+
+            // Store the selected subject ID in localStorage
+            localStorage.setItem('selectedSubjectId', subjectId);
+            
+            // Reset question section when subject changes
+            document.getElementById('addQuestionBtn').style.display = 'none';
+            document.getElementById('questionForm').style.display = 'none';
+            document.getElementById('selectChapterPrompt').style.display = 'block';
+            document.getElementById('questionsContainer').innerHTML = '';
+            
+            // Reset selected chapter
+            selectedChapterId = null;
+            localStorage.removeItem('selectedChapterId');
+        }
+
+        function loadChapters(subjectId) {
+            if (!db) {
+                console.error("Database not initialized");
+                return;
+            }
+            
+            try {
+                const transaction = db.transaction('chapters', 'readonly');
+                const store = transaction.objectStore('chapters');
+                const index = store.index('subjectId');
+                const request = index.getAll(subjectId);
+
+                request.onsuccess = (event) => {
+                    const chapters = event.target.result;
+                    console.log("Loaded chapters:", chapters);
+                    const list = document.getElementById('chapterList');
+                    list.innerHTML = '';
+
+                    chapters.forEach(chapter => {
+                        const li = document.createElement('li');
+                        li.className = 'list-item';
+                        li.textContent = chapter.name;
+                        li.setAttribute('data-id', chapter.id);
+
+                        // Create delete button
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'btn delete-btn';
+                        deleteBtn.innerHTML = '<i class="fa fa-trash-o"></i>'; // Font Awesome trash icon
+                        deleteBtn.onclick = (e) => {
+                            e.stopPropagation(); // Prevent triggering the chapter click
+                            deleteChapter(chapter.id);
+                        };
+                        deleteBtn.style.display = 'none'; // Initially hidden
+
+                        li.onclick = () => handleChapterClick(chapter.id, li);
+                        li.appendChild(deleteBtn); // Append delete button to the list item
+                        list.appendChild(li);
+                        
+                        // If this is the selected chapter, mark it as active
+                        if (chapter.id === selectedChapterId) {
+                            li.classList.add('active');
+                        }
+                    });
+                };
+
+                request.onerror = (event) => {
+                    console.error("Error loading chapters:", event.target.error);
+                };
+            } catch (error) {
+                console.error("Exception in loadChapters:", error);
+            }
+        }
+
+        function handleChapterClick(chapterId, element) {
+            selectedChapterId = chapterId;
+            document.querySelectorAll('#chapterList .list-item').forEach(item => 
+                item.classList.remove('active'));
+            element.classList.add('active');
+            
+            // Show Add Question button and hide select chapter prompt
+            document.getElementById('addQuestionBtn').style.display = 'inline-flex';
+            document.getElementById('selectChapterPrompt').style.display = 'none';
+            
+            // Load questions but keep form hidden until user clicks Add Question
+            loadQuestions(chapterId);
+
+            // Store the selected chapter ID in localStorage
+            localStorage.setItem('selectedChapterId', chapterId);
+        }
+
+        function loadQuestions(chapterId) {
+            if (!db) {
+                console.error("Database not initialized");
+                return;
+            }
+            
+            try {
+                const transaction = db.transaction(['questions', 'bookmarks'], 'readonly');
+                const questionsStore = transaction.objectStore('questions');
+                const bookmarksStore = transaction.objectStore('bookmarks');
+                const index = questionsStore.index('chapterId');
+                const request = index.getAll(chapterId);
+
+                request.onsuccess = (event) => {
+                    const questions = event.target.result;
+                    console.log("Loaded questions:", questions);
+                    const container = document.getElementById('questionsContainer');
+                    container.innerHTML = '';
+
+                    if (questions.length === 0) {
+                        container.innerHTML = `
+                            <div class="empty-state">
+                                <h3>No Questions Found</h3>
+                                <p>Add your first question using the form above</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    // Sort questions by timestamp in descending order
+                    questions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                    // Process each question
+                    let processedCount = 0;
+                    questions.forEach((question, index) => {
+                        const questionURL = URL.createObjectURL(new Blob([question.questionImage]));
+                        const solutionURL = question.solutionImage ? URL.createObjectURL(new Blob([question.solutionImage])) : '';
+
+                        // Check if this question is bookmarked
+                        const bookmarkRequest = bookmarksStore.get(question.id);
+                        
+                        bookmarkRequest.onsuccess = () => {
+                            const isBookmarked = bookmarkRequest.result !== undefined;
+                            
+                            const card = document.createElement('div');
+                            card.className = 'question-card';
+                            card.setAttribute('data-id', question.id);
+                            
+                            // Create HTML for solution image only if it exists
+                            let solutionHTML = '';
+                            if (question.solutionImage) {
+                                solutionHTML = `
+                                    <div>
+                                        <h4>Solution:</h4>
+                                        <img class="question-image" src="${solutionURL}" onclick="openImage('${solutionURL}')" style="cursor: pointer;">
+                                    </div>
+                                `;
+                            }
+                            
+                            card.innerHTML = `
+                                <div class="question-image-container" style="display: flex; align-items: center;">
+                                    <div style="margin-right: 1rem;">
+                                        <h4>Question ${index + 1}:</h4>
+                                        <img class="question-image" src="${questionURL}" onclick="openImage('${questionURL}')" style="cursor: pointer;">
+                                    </div>
+                                    ${solutionHTML}
+                                </div>
+                                <div style="display: flex; justify-content: center; margin-top: 1rem;">
+                                    <button class="bookmark-btn ${isBookmarked ? 'active' : 'inactive'}" onclick="toggleBookmark(${question.id})" aria-label="Bookmark">
+                                        <i class="fa ${isBookmarked ? 'fa-star' : 'fa-star-o'}"></i>
+                                    </button>
+                                    <button class="btn delete-btn" onclick="deleteQuestion(${question.id})" aria-label="Delete">
+                                        <i class="fa fa-trash-o"></i>
+                                    </button>
+                                </div>
+                            `;
+                            container.appendChild(card);
+                            
+                            processedCount++;
+                            if (processedCount === questions.length) {
+                                updateBookmarkCount();
+                            }
+                        };
+                    });
+                };
+
+                request.onerror = (event) => {
+                    console.error("Error loading questions:", event.target.error);
+                };
+            } catch (error) {
+                console.error("Exception in loadQuestions:", error);
+            }
+        }
+
+        function deleteQuestion(questionId) {
+            // Confirm deletion
+            if (confirm('Are you sure you want to delete this question?')) {
+                const transaction = db.transaction(['questions', 'bookmarks'], 'readwrite');
+                const questionsStore = transaction.objectStore('questions');
+                const bookmarksStore = transaction.objectStore('bookmarks');
+
+                // First check if it's bookmarked and remove the bookmark
+                bookmarksStore.delete(questionId);
+                
+                // Then delete the question
+                const deleteRequest = questionsStore.delete(questionId);
+                
+                deleteRequest.onsuccess = () => {
+                    console.log("Question deleted successfully");
+                    loadQuestions(selectedChapterId); // Reload questions after deletion
+                    updateBookmarkCount(); // Update bookmark count
+                    
+                    // If bookmark section is open, refresh it
+                    if (document.getElementById('bookmarkSection').style.display === 'block') {
+                        loadBookmarkedQuestions();
+                    }
+                    
+                    showNotification('Question deleted successfully!'); // Show notification
+                };
+
+                deleteRequest.onerror = (event) => {
+                    console.error('Error deleting question:', event.target.error);
+                    showNotification('Failed to delete question. Please try again.'); // Show notification on error
+                };
+            }
+        }
+
+        function deleteSubject(subjectId) {
+            if (confirm('Are you sure you want to delete this subject?')) {
+                const transaction = db.transaction('subjects', 'readwrite');
+                const store = transaction.objectStore('subjects');
+
+                const deleteRequest = store.delete(subjectId);
+                
+                deleteRequest.onsuccess = () => {
+                    console.log("Subject deleted successfully");
+                    // Reset selection if the deleted subject was selected
+                    if (selectedSubjectId === subjectId) {
+                        selectedSubjectId = null;
+                        selectedChapterId = null;
+                        document.getElementById('chapterList').innerHTML = '';
+                        document.getElementById('questionsContainer').innerHTML = '';
+                        document.getElementById('addQuestionBtn').style.display = 'none';
+                        document.getElementById('questionForm').style.display = 'none';
+                        document.getElementById('selectChapterPrompt').style.display = 'block';
+                        localStorage.removeItem('selectedSubjectId');
+                        localStorage.removeItem('selectedChapterId');
+                    }
+                    
+                    loadSubjects(); // Reload subjects after deletion
+                    showNotification('Subject deleted successfully!'); // Show notification
+                };
+
+                deleteRequest.onerror = (event) => {
+                    console.error('Error deleting subject:', event.target.error);
+                    showNotification('Failed to delete subject. Please try again.'); // Show notification on error
+                };
+            }
+        }
+
+        function deleteChapter(chapterId) {
+            if (confirm('Are you sure you want to delete this chapter?')) {
+                const transaction = db.transaction('chapters', 'readwrite');
+                const store = transaction.objectStore('chapters');
+
+                const deleteRequest = store.delete(chapterId);
+                
+                deleteRequest.onsuccess = () => {
+                    console.log("Chapter deleted successfully");
+                    // Reset selection if the deleted chapter was selected
+                    if (selectedChapterId === chapterId) {
+                        selectedChapterId = null;
+                        document.getElementById('questionsContainer').innerHTML = '';
+                        document.getElementById('addQuestionBtn').style.display = 'none';
+                        document.getElementById('questionForm').style.display = 'none';
+                        document.getElementById('selectChapterPrompt').style.display = 'block';
+                        localStorage.removeItem('selectedChapterId');
+                    }
+                    
+                    loadChapters(selectedSubjectId); // Reload chapters after deletion
+                    showNotification('Chapter deleted successfully!'); // Show notification
+                };
+
+                deleteRequest.onerror = (event) => {
+                    console.error('Error deleting chapter:', event.target.error);
+                    showNotification('Failed to delete chapter. Please try again.'); // Show notification on error
+                };
+            }
+        }
+
+        // Function to open image in the modal
+        function openImage(url) {
+            const modal = document.getElementById("imageModal");
+            const modalImage = document.getElementById("modalImage");
+            modal.style.display = "flex"; // Show the modal using flex to center
+            modalImage.src = url; // Set the image source
+        }
+
+        // Function to close the modal
+        function closeModal() {
+            const modal = document.getElementById("imageModal");
+            modal.style.display = "none"; // Hide the modal
+        }
+
+        // Function to show notification
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message; // Set the message
+            notification.style.display = 'block'; // Show the notification
+            notification.style.opacity = '1'; // Make it visible
+
+            // Hide the notification after 2 seconds
+            setTimeout(() => {
+                notification.style.opacity = '0'; // Fade out
+                setTimeout(() => {
+                    notification.style.display = 'none'; // Hide after fade out
+                }, 500); // Wait for fade out to complete
+            }, 2000); // Show for 2 seconds
+        }
+
+        let editMode = false; // Track whether we are in edit mode
+
+        function toggleEdit(section) {
+            editMode = !editMode; // Toggle edit mode
+            const list = section === 'subject' ? document.getElementById('subjectList') : document.getElementById('chapterList');
+            const items = list.querySelectorAll('.list-item');
+
+            items.forEach(item => {
+                const deleteBtn = item.querySelector('.delete-btn');
+                if (deleteBtn) {
+                    deleteBtn.style.display = editMode ? 'inline-flex' : 'none'; // Show or hide delete button
+                }
+            });
+        }
+
+
+
+// Toggle bookmark for a question
+function toggleBookmark(questionId) {
+    const transaction = db.transaction(['questions', 'bookmarks'], 'readwrite');
+    const questionsStore = transaction.objectStore('questions');
+    const bookmarksStore = transaction.objectStore('bookmarks');
+    
+    // Check if question exists
+    const questionRequest = questionsStore.get(questionId);
+    
+    questionRequest.onsuccess = () => {
+        const question = questionRequest.result;
+        if (!question) {
+            showNotification('Question not found!');
+            return;
+        }
+        
+        // Check if already bookmarked
+        const bookmarkRequest = bookmarksStore.get(questionId);
+        
+        bookmarkRequest.onsuccess = () => {
+            const bookmark = bookmarkRequest.result;
+            
+            if (bookmark) {
+                // Remove bookmark
+                const deleteRequest = bookmarksStore.delete(questionId);
+                
+                deleteRequest.onsuccess = () => {
+                    console.log("Bookmark removed successfully");
+                    showNotification('Bookmark removed!');
+                    updateBookmarkUI(questionId, false);
+                    updateBookmarkCount();
+                    
+                    // If bookmark section is open, refresh it
+                    if (document.getElementById('bookmarkSection').style.display === 'block') {
+                        loadBookmarkedQuestions();
+                    }
+                };
+                
+                deleteRequest.onerror = (event) => {
+                    console.error("Error removing bookmark:", event.target.error);
+                };
+            } else {
+                // Add bookmark
+                const newBookmark = {
+                    questionId: questionId,
+                    chapterId: question.chapterId,
+                    timestamp: new Date().toISOString()
+                };
+                
+                const addRequest = bookmarksStore.add(newBookmark);
+                
+                addRequest.onsuccess = () => {
+                    console.log("Bookmark added successfully");
+                    showNotification('Question bookmarked!');
+                    updateBookmarkUI(questionId, true);
+                    updateBookmarkCount();
+                    
+                    // If bookmark section is open, refresh it
+                    if (document.getElementById('bookmarkSection').style.display === 'block') {
+                        loadBookmarkedQuestions();
+                    }
+                };
+                
+                addRequest.onerror = (event) => {
+                    console.error("Error adding bookmark:", event.target.error);
+                };
+            }
+        };
+    };
+}
+
+// Update bookmark button UI
+function updateBookmarkUI(questionId, isBookmarked) {
+    // Update in main questions container
+    const questionCards = document.querySelectorAll('.question-card');
+    questionCards.forEach(card => {
+        if (parseInt(card.getAttribute('data-id')) === questionId) {
+            const bookmarkBtn = card.querySelector('.bookmark-btn');
+            const icon = bookmarkBtn.querySelector('i');
+            
+            if (isBookmarked) {
+                bookmarkBtn.classList.remove('inactive');
+                bookmarkBtn.classList.add('active');
+                icon.classList.remove('fa-star-o');
+                icon.classList.add('fa-star');
+            } else {
+                bookmarkBtn.classList.remove('active');
+                bookmarkBtn.classList.add('inactive');
+                icon.classList.remove('fa-star');
+                icon.classList.add('fa-star-o');
+            }
+        }
+    });
+}
+
+// Toggle bookmark section visibility with blur effect
+function toggleBookmarkSection() {
+    const bookmarkSection = document.getElementById('bookmarkSection');
+    const blurOverlay = document.querySelector('.blur-overlay');
+    
+    // Create blur overlay if it doesn't exist
+    if (!blurOverlay) {
+        const overlay = document.createElement('div');
+        overlay.className = 'blur-overlay';
+        document.body.appendChild(overlay);
+    }
+    
+    if (bookmarkSection.style.display === 'block') {
+        bookmarkSection.style.display = 'none';
+        document.querySelector('.blur-overlay').style.display = 'none';
+    } else {
+        bookmarkSection.style.display = 'block';
+        document.querySelector('.blur-overlay').style.display = 'block';
+        loadBookmarkedQuestions();
+    }
+}
+
+// Load all bookmarked questions
+function loadBookmarkedQuestions() {
+    if (!db) {
+        console.error("Database not initialized");
+        return;
+    }
+    
+    try {
+        const transaction = db.transaction(['bookmarks', 'questions'], 'readonly');
+        const bookmarksStore = transaction.objectStore('bookmarks');
+        const questionsStore = transaction.objectStore('questions');
+        const bookmarksRequest = bookmarksStore.getAll();
+        
+        bookmarksRequest.onsuccess = () => {
+            const bookmarks = bookmarksRequest.result;
+            console.log("Loaded bookmarks:", bookmarks);
+            const container = document.getElementById('bookmarkedQuestionsContainer');
+            container.innerHTML = '';
+            
+            if (bookmarks.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No Bookmarked Questions</h3>
+                        <p>Star your favorite questions to bookmark them</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Sort bookmarks by timestamp (newest first)
+            bookmarks.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            let loadedCount = 0;
+            bookmarks.forEach((bookmark, index) => {
+                const questionRequest = questionsStore.get(bookmark.questionId);
+                
+                questionRequest.onsuccess = () => {
+                    const question = questionRequest.result;
+                    
+                    if (question) {
+                        const questionURL = URL.createObjectURL(new Blob([question.questionImage]));
+                        const solutionURL = question.solutionImage ? URL.createObjectURL(new Blob([question.solutionImage])) : '';
+                        
+                        const card = document.createElement('div');
+                        card.className = 'question-card';
+                        card.setAttribute('data-id', question.id);
+                        
+                        // Create HTML for solution image only if it exists
+                        let solutionHTML = '';
+                        if (question.solutionImage) {
+                            solutionHTML = `
+                                <div>
+                                    <h4>Solution:</h4>
+                                    <img class="question-image" src="${solutionURL}" onclick="openImage('${solutionURL}')" style="cursor: pointer;">
+                                </div>
+                            `;
+                        }
+                        
+                        card.innerHTML = `
+                            <div class="question-image-container" style="display: flex; align-items: center;">
+                                <div style="margin-right: 1rem;">
+                                    <h4>Bookmarked Question ${index + 1}:</h4>
+                                    <img class="question-image" src="${questionURL}" onclick="openImage('${questionURL}')" style="cursor: pointer;">
+                                </div>
+                                ${solutionHTML}
+                            </div>
+                            <div style="display: flex; justify-content: center; margin-top: 1rem;">
+                                <button class="bookmark-btn active" onclick="toggleBookmark(${question.id})" aria-label="Remove Bookmark">
+                                    <i class="fa fa-star"></i>
+                                </button>
+                            </div>
+                        `;
+                        container.appendChild(card);
+                    }
+                    
+                    loadedCount++;
+                    if (loadedCount === bookmarks.length) {
+                        // All bookmarked questions loaded
+                        console.log("All bookmarked questions loaded");
+                    }
+                };
+                
+                questionRequest.onerror = (event) => {
+                    console.error("Error loading bookmarked question:", event.target.error);
+                };
+            });
+        };
+        
+        bookmarksRequest.onerror = (event) => {
+            console.error("Error loading bookmarks:", event.target.error);
+        };
+    } catch (error) {
+        console.error("Exception in loadBookmarkedQuestions:", error);
+    }
+}
+
+
+// Update bookmark count badge
+function updateBookmarkCount() {
+    if (!db) {
+        console.error("Database not initialized");
+        return;
+    }
+    
+    try {
+        const transaction = db.transaction('bookmarks', 'readonly');
+        const store = transaction.objectStore('bookmarks');
+        const countRequest = store.count();
+        
+        countRequest.onsuccess = () => {
+            const count = countRequest.result;
+            const countElement = document.getElementById('bookmarkCount');
+            
+            if (count > 0) {
+                countElement.textContent = count;
+                countElement.style.display = 'flex';
+            } else {
+                countElement.style.display = 'none';
+            }
+        };
+        
+        countRequest.onerror = (event) => {
+            console.error("Error counting bookmarks:", event.target.error);
+        };
+    } catch (error) {
+        console.error("Exception in updateBookmarkCount:", error);
+    }
+}
+
+// On page load, check for stored values
+window.onload = function() {
+    const storedSubjectId = localStorage.getItem('selectedSubjectId');
+    const storedChapterId = localStorage.getItem('selectedChapterId');
+
+    if (storedSubjectId) {
+        selectedSubjectId = parseInt(storedSubjectId);
+        console.log("Restored selected subject ID:", selectedSubjectId);
+    }
+
+    if (storedChapterId) {
+        selectedChapterId = parseInt(storedChapterId);
+        console.log("Restored selected chapter ID:", selectedChapterId);
+    }
+    
+    // Create blur overlay element if it doesn't exist
+    if (!document.querySelector('.blur-overlay')) {
+        const overlay = document.createElement('div');
+        overlay.className = 'blur-overlay';
+        document.body.appendChild(overlay);
+    }
+    
+    // Update bookmark count on page load
+    updateBookmarkCount();
+};
+
+// Helper function to get all data from a store
+function getAllData(storeName) {
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(storeName, 'readonly');
+        const store = transaction.objectStore(storeName);
+        const request = store.getAll();
+        
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+// Convert ArrayBuffer to Base64 string
+function arrayBufferToBase64(buffer) {
+    if (!buffer) return null;
+    
+    const binary = [];
+    const bytes = new Uint8Array(buffer);
+    const len = bytes.byteLength;
+    
+    for (let i = 0; i < len; i++) {
+        binary.push(String.fromCharCode(bytes[i]));
+    }
+    
+    return btoa(binary.join(''));
+}
+
+// Convert Base64 string back to ArrayBuffer
+function base64ToArrayBuffer(base64) {
+    if (!base64) return null;
+    
+    const binaryString = atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    
+    return bytes.buffer;
+}
+
+// Export all data as a JSON file
+function exportData() {
+    // Show loading notification
+    showNotification('Preparing backup...');
+    
+    const backupData = {
+        subjects: [],
+        chapters: [],
+        questions: [],
+        bookmarks: []
+    };
+    
+    // First get all subjects
+    const subjectsPromise = getAllData('subjects');
+    
+    subjectsPromise
+        .then(subjects => {
+            backupData.subjects = subjects;
+            return getAllData('chapters');
+        })
+        .then(chapters => {
+            backupData.chapters = chapters;
+            return getAllData('questions');
+        })
+        .then(questions => {
+            // Convert ArrayBuffer to Base64 for each question image
+            const processedQuestions = questions.map(question => {
+                return {
+                    id: question.id,
+                    chapterId: question.chapterId,
+                    timestamp: question.timestamp,
+                    questionImage: arrayBufferToBase64(question.questionImage),
+                    solutionImage: question.solutionImage ? arrayBufferToBase64(question.solutionImage) : null
+                };
+            });
+            
+            backupData.questions = processedQuestions;
+            return getAllData('bookmarks');
+        })
+        .then(bookmarks => {
+            backupData.bookmarks = bookmarks;
+            
+            // Create and download the backup file
+            const dataStr = JSON.stringify(backupData);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `JEE_QuestionBank_Backup_${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showNotification('Backup successfully created!');
+        })
+        .catch(error => {
+            console.error('Error creating backup:', error);
+            showNotification('Error creating backup. Please try again.');
+        });
+}
+
+
+
+
+
+        // Import data from a JSON file
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                return;
+            }
+            
+            // Show loading notification
+            showNotification('Importing data...');
+            
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const backupData = JSON.parse(e.target.result);
+                    
+                    // Clear existing database and import new data
+                    clearDatabase()
+                        .then(() => {
+                            return importSubjects(backupData.subjects);
+                        })
+                        .then(() => {
+                            return importChapters(backupData.chapters);
+                        })
+                        .then(() => {
+                            return importQuestions(backupData.questions);
+                        })
+                        .then(() => {
+                            return importBookmarks(backupData.bookmarks || []);
+                        })
+                        .then(() => {
+                            showNotification('Data imported successfully!');
+                            
+                            // Reset selections and reload data
+                            selectedSubjectId = null;
+                            selectedChapterId = null;
+                            localStorage.removeItem('selectedSubjectId');
+                            localStorage.removeItem('selectedChapterId');
+                            
+                            loadSubjects();
+                            document.getElementById('chapterList').innerHTML = '';
+                            document.getElementById('questionsContainer').innerHTML = '';
+                            document.getElementById('addQuestionBtn').style.display = 'none';
+                            document.getElementById('questionForm').style.display = 'none';
+                            document.getElementById('selectChapterPrompt').style.display = 'block';
+                            
+                            // Update bookmark count
+                            updateBookmarkCount();
+                            
+                            // Reset file input
+                            document.getElementById('importInput').value = '';
+                        })
+                        .catch(error => {
+                            console.error('Error importing data:', error);
+                            showNotification('Error importing data. Please try again.');
+                        });
+                } catch (error) {
+                    console.error('Error parsing backup file:', error);
+                    showNotification('Invalid backup file format. Please select a valid backup file.');
+                }
+            };
+            
+            reader.onerror = function() {
+                showNotification('Error reading file. Please try again.');
+            };
+            
+            reader.readAsText(file);
+        }
+
+        // Clear all data from the database
+        function clearDatabase() {
+            return new Promise((resolve, reject) => {
+                const stores = ['subjects', 'chapters', 'questions', 'bookmarks'];
+                let completed = 0;
+                
+                stores.forEach(storeName => {
+                    const transaction = db.transaction(storeName, 'readwrite');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.clear();
+                    
+                    request.onsuccess = () => {
+                        completed++;
+                        if (completed === stores.length) {
+                            resolve();
+                        }
+                    };
+                    
+                    request.onerror = () => {
+                        reject(request.error);
+                    };
+                });
+            });
+        }
+
+        // Import subjects
+        function importSubjects(subjects) {
+            return new Promise((resolve, reject) => {
+                if (!subjects || subjects.length === 0) {
+                    resolve();
+                    return;
+                }
+                
+                const transaction = db.transaction('subjects', 'readwrite');
+                const store = transaction.objectStore('subjects');
+                let completed = 0;
+                
+                subjects.forEach(subject => {
+                    const request = store.add(subject);
+                    
+                    request.onsuccess = () => {
+                        completed++;
+                        if (completed === subjects.length) {
+                            resolve();
+                        }
+                    };
+                    
+                    request.onerror = () => {
+                        reject(request.error);
+                    };
+                });
+            });
+        }
+
+        // Import chapters
+        function importChapters(chapters) {
+            return new Promise((resolve, reject) => {
+                if (!chapters || chapters.length === 0) {
+                    resolve();
+                    return;
+                }
+                
+                const transaction = db.transaction('chapters', 'readwrite');
+                const store = transaction.objectStore('chapters');
+                let completed = 0;
+                
+                chapters.forEach(chapter => {
+                    const request = store.add(chapter);
+                    
+                    request.onsuccess = () => {
+                        completed++;
+                        if (completed === chapters.length) {
+                            resolve();
+                        }
+                    };
+                    
+                    request.onerror = () => {
+                        reject(request.error);
+                    };
+                });
+            });
+        }
+
+        // Import questions
+        function importQuestions(questions) {
+            return new Promise((resolve, reject) => {
+                if (!questions || questions.length === 0) {
+                    resolve();
+                    return;
+                }
+                
+                const transaction = db.transaction('questions', 'readwrite');
+                const store = transaction.objectStore('questions');
+                let completed = 0;
+                
+                questions.forEach(question => {
+                    // Convert Base64 strings back to ArrayBuffer
+                    const processedQuestion = {
+                        id: question.id,
+                        chapterId: question.chapterId,
+                        timestamp: question.timestamp,
+                        questionImage: base64ToArrayBuffer(question.questionImage),
+                        solutionImage: question.solutionImage ? base64ToArrayBuffer(question.solutionImage) : null
+                    };
+                    
+                    const request = store.add(processedQuestion);
+                    
+                    request.onsuccess = () => {
+                        completed++;
+                        if (completed === questions.length) {
+                            resolve();
+                        }
+                    };
+                    
+                    request.onerror = () => {
+                        reject(request.error);
+                    };
+                });
+            });
+        }
+
+        // Import bookmarks
+        function importBookmarks(bookmarks) {
+            return new Promise((resolve, reject) => {
+                if (!bookmarks || bookmarks.length === 0) {
+                    resolve();
+                    return;
+                }
+                
+                const transaction = db.transaction('bookmarks', 'readwrite');
+                const store = transaction.objectStore('bookmarks');
+                let completed = 0;
+                
+                bookmarks.forEach(bookmark => {
+                    const request = store.add(bookmark);
+                    
+                    request.onsuccess = () => {
+                        completed++;
+                        if (completed === bookmarks.length) {
+                            resolve();
+                        }
+                    };
+                    
+                    request.onerror = () => {
+                        reject(request.error);
+                    };
+                });
+            });
+        }
+    </script>
+</body>
+</html>
+
