@@ -23,9 +23,10 @@ body {
 
 .container {
     display: grid;
-    grid-template-columns: 240px 280px 1fr; /* Sidebar for subjects, sidebar for chapters, and main content */
+    grid-template-columns: 1fr 1fr 1fr; /* Sidebar for subjects, sidebar for chapters, and main content */
     gap: 1.5rem;
     max-width: 1600px;
+    width: 95%;
     margin: 0 auto;
     margin-top: 50px;
 }
